@@ -6,9 +6,9 @@
 # v0.3 eddi 20230423
 #  - changes: switch from polygon PathPatch
 #  - obstacle integration
-# state: x,y-points in one ore more mow areas including 0 to n obstacles can be moved and saved to a new map (output.bag)
+# state: x,y-points in one ore more mow or navigation areas including 0 to n obstacles can be moved and saved to a new map (output.bag)
 # to do:
-# - integration of transportation area
+#
 # - possibilty of adding and deleting points (first and last points of a circle MUST NOT be deleted!)
 # - integration of docking station
 # you need a python runtime and at least bagpy-package (pip3 install bagpy)
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     bag = rosbag.Bag('map.bag')
     with rosbag.Bag('output.bag', 'w') as outbag:
         for topic, msg, t in bag.read_messages():
-            if topic == 'mowing_areas':
+            if (topic == 'mowing_areas' or topic == 'navigation_areas'):
                 x_list_area = []
                 y_list_area = []
                 verts=[]
