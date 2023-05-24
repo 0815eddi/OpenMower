@@ -4,12 +4,14 @@
 # v0.1 nekraus
 # v0.2 javaboon
 # v0.3 eddi 20230423
+# v0.4 biemond
+# v0.5 silvger
 #  - changes: switch from polygon PathPatch
 #  - obstacle integration
-# state: x,y-points in one ore more mow areas including 0 to n obstacles can be moved and saved to a new map (output.bag)
+#  state: x,y-points in one ore more mow areas including 0 to n obstacles can be moved and saved to a new map (output.bag)
 # to do:
 # - integration of transportation area
-# - possibilty of adding and deleting points (first and last points of a circle MUST NOT be deleted!)
+# - possibilty of adding points(first and last points of a circle MUST NOT be deleted!)
 # - integration of docking station
 # you need a python runtime and at least bagpy-package (pip3 install bagpy)
 #########################################################################################################
@@ -134,14 +136,15 @@ class PathInteractor:
             self.line.set_visible(self.showverts)
             if not self.showverts:
                 self._ind = None
-        ###delete doesn't work - work in progress!###
-        #elif event.key == 'd':
-        #    ind = self.get_ind_under_point(event)
-        #    if ind is not None:
-        #        self.pathpatch.get_path().vertices = np.delete(self.pathpatch.get_path().vertices,
-        #                                 ind, axis=0)
-        #        self.line.set_data(zip(*self.pathpatch.get_path().vertices))
+        elif event.key == 'd':
+            ind = self.get_ind_under_point(event)
+            if ind is not None:
+                # Delete the point
+                self.pathpatch.get_path().vertices = np.delete(self.pathpatch.get_path().vertices, ind, axis=0)
+                self.pathpatch.get_path().codes = np.delete(self.pathpatch.get_path().codes, ind, axis=0)
+                self.line.set_data(zip(*self.pathpatch.get_path().vertices))
         self.canvas.draw()
+
 
     def on_mouse_move(self, event):
         """Callback for mouse movements."""
@@ -170,7 +173,7 @@ if __name__ == '__main__':
     bag = rosbag.Bag('map.bag')
     with rosbag.Bag('output.bag', 'w') as outbag:
         for topic, msg, t in bag.read_messages():
-            if topic == 'mowing_areas':
+            if topic in ['mowing_areas', 'navigation_areas']:
                 x_list_area = []
                 y_list_area = []
                 verts=[]
@@ -261,7 +264,6 @@ if __name__ == '__main__':
                     l = l + 1
             outbag.write(topic, msg, t)
             
-
 
 
 
