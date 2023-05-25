@@ -4,6 +4,7 @@
 # v0.1 nekraus
 # v0.2 javaboon
 # v0.3 eddi 20230423
+# v0.4 BinaryCherry
 #  - changes: switch from polygon PathPatch
 #  - obstacle integration
 # state: x,y-points in one ore more mow areas including 0 to n obstacles can be moved and saved to a new map (output.bag)
@@ -170,7 +171,7 @@ if __name__ == '__main__':
     bag = rosbag.Bag('map.bag')
     with rosbag.Bag('output.bag', 'w') as outbag:
         for topic, msg, t in bag.read_messages():
-            if topic == 'mowing_areas':
+            if topic == 'mowing_areas' or topic == 'navigation_areas':
                 x_list_area = []
                 y_list_area = []
                 verts=[]
@@ -202,44 +203,44 @@ if __name__ == '__main__':
                 o = len(msg.obstacles)
                 for k in range(o): #Loop over 0 - n obstacles
 
-                        x_list_obstacle=[]
-                        y_list_obstacle=[]
-                        verts_o=[]
-                        codes_o=[]               
-                        for point in msg.obstacles[k].points:
+                    x_list_obstacle=[]
+                    y_list_obstacle=[]
+                    verts_o=[]
+                    codes_o=[]               
+                    for point in msg.obstacles[k].points:
 
-                             x_list_obstacle.append(point.x)
-                             y_list_obstacle.append(point.y) 
-                            
-                             j = 0
-                        n = len(x_list_obstacle)
-                        
-                        verts_o = (np.column_stack([x_list_obstacle,y_list_obstacle]))
-                        while j < n:
-                                    #print (j) 
-                                    if j == 0:
-                                     code=Path.MOVETO
-                                    elif j == n-1:
-                                         code=Path.CLOSEPOLY
-                                    else:
-                                        code=Path.LINETO    
-                                    codes_o.append(code)
-                                    j = j + 1
-                        path_o=Path(verts_o, codes_o)
-                        path=Path.make_compound_path(path,path_o)       
- 
+                        x_list_obstacle.append(point.x)
+                        y_list_obstacle.append(point.y) 
+
+                        j = 0
+                    n = len(x_list_obstacle)
+
+                    verts_o = (np.column_stack([x_list_obstacle,y_list_obstacle]))
+                    while j < n:
+                        #print (j) 
+                        if j == 0:
+                            code=Path.MOVETO
+                        elif j == n-1:
+                            code=Path.CLOSEPOLY
+                        else:
+                            code=Path.LINETO    
+                        codes_o.append(code)
+                        j = j + 1
+                    path_o=Path(verts_o, codes_o)
+                    path=Path.make_compound_path(path,path_o)       
+
                 fig, ax = plt.subplots()
                 patch = PathPatch(path)
                 ax.add_patch(patch)
-                
-            
+
+
                 p = PathInteractor(patch)
                 fig.canvas.manager.set_window_title('OpenMower Map editor')
                 ax.set_title('Click and drag a point to move it')
                 ax.set_xlabel( "\'d\' delete the point     \'i\' insert a new point", size=12, ha="center")
                 ax.set_xlim((min(x_list_area)-1, max(x_list_area)+1))
                 ax.set_ylim((min(y_list_area)-1, max(y_list_area)+1))
-                
+
                 plt.show()
                 #figure closed by user, get the new data
                 msg.area.points = []
@@ -248,21 +249,15 @@ if __name__ == '__main__':
                 m = -1  #counter obstacles (0 - n), mowing area= -1 
 
                 for x,y in p.pathpatch.get_path().vertices:
-   
+
                     point = Point32(x,y,0) 
                     msg_area.append(point)
-                  
+
                     #change msg_area on CLOSEPOLY (code 79)
                     if p.pathpatch.get_path().codes[l] == 79:                           
                         if m < o - 1:   
-                             m = m + 1
-                             msg.obstacles[m].points=[]
-                             msg_area=msg.obstacles[m].points
+                            m = m + 1
+                            msg.obstacles[m].points=[]
+                            msg_area=msg.obstacles[m].points
                     l = l + 1
             outbag.write(topic, msg, t)
-            
-
-
-
-
-
