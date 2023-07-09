@@ -1,4 +1,4 @@
-#########################################################################################################
+############################################################################################################################
 # mowareareader for openmower
 # a simple map editor based on maptolib
 # v0.1 nekraus
@@ -6,13 +6,24 @@
 # v0.3 eddi 20230423
 #  - changes: switch from polygon PathPatch
 #  - obstacle integration
-# state: x,y-points in one ore more mow or navigation areas including 0 to n obstacles can be moved and saved to a new map (output.bag)
+# v0.4 eddi (thanks to dvismans!!)
+#  - possibility of deleting points (Note (first and last points of a circle MUST NOT be deleted!)
+#  - some basic "how to use" - instructions 
+# state: x,y-points in one ore more mow or navigation areas including 0 to n obstacles can be moved/deleted and saved to a new map (output.bag)
+# 
 # to do:
 #
-# - possibilty of adding and deleting points (first and last points of a circle MUST NOT be deleted!)
+# - possibilty of adding points 
 # - integration of docking station
 # you need a python runtime and at least bagpy-package (pip3 install bagpy)
-#########################################################################################################
+# copy your map.bag from openmower (/root/ros_home/.ros/map.bag) in the same directory where mowareareader.py is running
+# When running a window opens with your 1st mow area (including obstacles). You can move and delete the points as you like. then close the window.
+# When you close the window, the next mow area is shown - and so on. 
+# After the mow areas the navigations areas will follow step by step. Handle them in the same way.
+# Output is saved in the same directory as "output.bag"
+# copy output.bag to your openmower (/root/ros_home/.ros/map.bag)
+# KEEP A COPY OF YOUR ORIGIN MAP.BAG!!! - for the case something is wrong with your new map you can go back to lat working map
+###############################################################################################################################
 
 
 import sys
@@ -126,7 +137,7 @@ class PathInteractor:
         self._ind = None
 
     def on_key_press(self, event):
-        """Callback for key presses."""
+        #Callback for key presses.
         if not event.inaxes:
             return
         if event.key == 't':
@@ -134,13 +145,18 @@ class PathInteractor:
             self.line.set_visible(self.showverts)
             if not self.showverts:
                 self._ind = None
-        ###delete doesn't work - work in progress!###
-        #elif event.key == 'd':
-        #    ind = self.get_ind_under_point(event)
-        #    if ind is not None:
-        #        self.pathpatch.get_path().vertices = np.delete(self.pathpatch.get_path().vertices,
-        #                                 ind, axis=0)
-        #        self.line.set_data(zip(*self.pathpatch.get_path().vertices))
+        elif event.key == 'd':
+            ind = self.get_ind_under_point(event)
+            if ind is not None:
+                path_data = self.pathpatch.get_path()
+                path_data.vertices = np.delete(path_data.vertices, ind, axis=0)
+                path_data.codes = np.delete(path_data.codes, ind, axis=0)
+                if ind == 0:
+                    path_data.codes[0] = Path.MOVETO
+                elif ind == len(path_data.codes):
+                    path_data.codes[-1] = Path.CLOSEPOLY
+                self.pathpatch.set_path(path_data)
+                self.line.set_data(zip(*self.pathpatch.get_path().vertices))
         self.canvas.draw()
 
     def on_mouse_move(self, event):
