@@ -10,7 +10,8 @@
 #  - possibility of deleting points (Note (first and last points of a circle MUST NOT be deleted!)
 #  - some basic "how to use" - instructions 
 # state: x,y-points in one ore more mow or navigation areas including 0 to n obstacles can be moved/deleted and saved to a new map (output.bag)
-# 
+# v0.5 suplstfdo: Add map background image to plot
+#
 # to do:
 #
 # - possibilty of adding points 
@@ -22,6 +23,11 @@
 # After the mow areas the navigations areas will follow step by step. Handle them in the same way.
 # Output is saved in the same directory as "output.bag"
 # copy output.bag to your openmower (/root/ros_home/.ros/map.bag)
+# You can enhance the experience by adding a graphical map to the plot. This can be a screenshot from google maps of your lawn. Name the picture 'yard.png'
+# and place id beside the script. rename ".env-example" to just ".env" and alter the variables according to your map. The "GRAPHICAL_MAP_PX_PER_M" must
+# be be measured from your map. Google map shows a scale at the bottom right corner, which is helpful for this. The "GRAPHICAL_MAP_ORIGIN_PX" values are the pixel
+# coordinates of the png, that shows your map origin, aka. "OM_DATUM_*" values you configured for your openmower.
+#
 # KEEP A COPY OF YOUR ORIGIN MAP.BAG!!! - for the case something is wrong with your new map you can go back to lat working map
 ###############################################################################################################################
 
@@ -41,6 +47,10 @@ from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 from matplotlib.path import Path
 from matplotlib.backend_bases import MouseButton
+import matplotlib.image as mpimg
+import dotenv
+
+dotenv.load_dotenv()
 
 def dist(x, y):
     """
@@ -79,7 +89,7 @@ class PathInteractor:
     """
 
     showverts = True
-    epsilon = 5  # max pixel distance to count as a vertex hit
+    epsilon = 25  # max pixel distance to count as a vertex hit
 
     def __init__(self, pathpatch):
 
@@ -245,7 +255,22 @@ if __name__ == '__main__':
                         path=Path.make_compound_path(path,path_o)       
  
                 fig, ax = plt.subplots()
-                patch = PathPatch(path)
+                if os.environ.get('GRAPHICAL_MAP_FILENAME') and os.environ.get('GRAPHICAL_MAP_PX_PER_M') and \
+                os.environ.get('GRAPHICAL_MAP_ORIGIN_PX_X') and os.environ.get('GRAPHICAL_MAP_ORIGIN_PX_Y'):
+                    img = mpimg.imread(os.environ['GRAPHICAL_MAP_FILENAME'])
+                    px_per_m=float(os.environ['GRAPHICAL_MAP_PX_PER_M'])
+                    m_per_px=1/px_per_m
+                    null_punkt_x = int(os.environ['GRAPHICAL_MAP_ORIGIN_PX_X'])
+                    null_punkt_y = int(os.environ['GRAPHICAL_MAP_ORIGIN_PX_Y'])
+                    width_px, height_px, _ = img.shape
+                    image_scale = [
+                        -null_punkt_x*m_per_px,
+                        (width_px-null_punkt_x)*m_per_px,
+                        -null_punkt_y*m_per_px,
+                        (height_px-null_punkt_y)*m_per_px
+                    ]
+                    imageshow = ax.imshow(img, extent=image_scale, aspect='equal')
+                patch = PathPatch(path, facecolor='white', edgecolor='black', alpha=0.5)
                 ax.add_patch(patch)
                 
             
@@ -253,8 +278,8 @@ if __name__ == '__main__':
                 fig.canvas.manager.set_window_title('OpenMower Map editor')
                 ax.set_title('Click and drag a point to move it')
                 ax.set_xlabel( "\'d\' delete the point     \'i\' insert a new point", size=12, ha="center")
-                ax.set_xlim((min(x_list_area)-1, max(x_list_area)+1))
-                ax.set_ylim((min(y_list_area)-1, max(y_list_area)+1))
+                ax.set_xlim((min(x_list_area)-3, max(x_list_area)+3))
+                ax.set_ylim((min(y_list_area)-3, max(y_list_area)+3))
                 
                 plt.show()
                 #figure closed by user, get the new data
